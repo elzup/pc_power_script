@@ -1,0 +1,13 @@
+{
+    "name": "root/eject",
+    "authors": [
+        {
+            "name": "elzzup",
+            "email": "guild0105@gmail.com"
+        }
+    ],
+    "require": {
+        "mpyw/twistoauth": "@dev"
+    }
+}
+
