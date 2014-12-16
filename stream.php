@@ -1,6 +1,6 @@
 <?php
-require_once('./vendor/autoload.php');
-require_once('./keys.php');
+require_once(dirname(__FILE__) . '/vendor/autoload.php');
+require_once(dirname(__FILE__) . '/keys.php');
 
 /**
 keys.phpを設置して twitter tokenなどを用意しておく
@@ -8,6 +8,10 @@ define('CONSUMER_KEY'       , '*********');
 define('CONSUMER_SECRET'    , '*********');
 define('OAUTH_TOKEN'        , '***-******');
 define('OAUTH_TOKEN_SECRET' , '*********');
+define('EM_CONSUMER_KEY'       , '*********');
+define('EM_CONSUMER_SECRET'    , '*********');
+define('EM_OAUTH_TOKEN'        , '***-******');
+define('EM_OAUTH_TOKEN_SECRET' , '*********');
  *
  */
 
@@ -17,6 +21,9 @@ define('YOUR_SCREEN_NAME', 'arzzup');
 define('MATCH_PATTERN_EJECT', '#(eject|[起お]き[ろ|て])#u');
 define('MATCH_PATTERN_BG', '#(bg|(壁|かべ)(紙|[がか]み)|アッシェンテ|ｱｯｼｪﾝﾃ)#u');
 
+define('DIR_IMG_SAVE', '~/Pictures/bg/');
+
+load_last_bg();
 //
 
 $url = 'https://userstream.twitter.com/1.1/user.json';
@@ -52,34 +59,66 @@ if ($fp) {
     while (!feof($fp)) {
         $res = fgets($fp);
         $res = json_decode($res, true);
-        echo $res['text'];
         // テキスト判定部分
         if (isset($res['in_reply_to_screen_name']) && preg_match('#' . YOUR_SCREEN_NAME . '#i', $res['in_reply_to_screen_name'])) {
             if (preg_match(MATCH_PATTERN_EJECT, $res['text'])) {
                 `eject`;
+                $text = '@' . $res['user']['screen_name'] . ' えるざっぷ叩き起こしたよ！ありがとう！';
+                post_elmane($res['id'], $text);
             }
             if (preg_match(MATCH_PATTERN_BG, $res['text'])) {
                 if (!$url = $res['entities']['media'][0]['media_url']) {
                     continue;
                 }
                 $words = explode('/', $url);
-                echo $hash = $words[4];
+                $hash = $words[4];
                 $f = file_get_contents($url);
-
-                exec("wget $url -P ~/Downloads/");
-                exec("display -window root ~/Downloads/$hash");
-
-                $query = 'statuses/update';
+                if (!file_exists(DIR_IMG_SAVE . $hash)) {
+                    exec("wget $url -P " . DIR_IMG_SAVE);
+                }
+                exec("display -window root -resize 1366x768 " . DIR_IMG_SAVE . $hash);
                 $text = '@' . $res['user']['screen_name'] . ' えるざっぷのPCの壁紙変更に成功したよ！かわいい壁紙をありがとう！';
-                $params = array(
-                    'in_reply_to_status_id' => $res['id'],
-                    'status' => $text,
-                );
-                $to->post($query, $params);
-
-                var_dump($res);
+                post_elmane($res['id'], $text);
             }
         }
     }
     fclose($fp);
 }
+
+function post_elmane($rep_id, $text) {
+    global $to;
+    $query = 'statuses/update';
+    $params = array(
+        'in_reply_to_status_id' => $rep_id,
+        'status' => $text,
+    );
+    $to->post($query, $params);
+}
+
+function load_last_bg() {
+    global $to;
+    $query = 'search/tweets';
+    $params = array(
+        'q' => '@' . YOUR_SCREEN_NAME,
+        'result_type' => 'recent',
+        'include_entities' => 1,
+        'count' => 3
+    );
+    $res = $to->get($query, $params);
+    foreach ($res->statuses as $st) {
+        if (!preg_match(MATCH_PATTERN_BG, $st->text) || (!$url = @$st->entities->media[0]->media_url)) {
+            continue;
+        }
+        $words = explode('/', $url);
+        $hash = array_pop($words);
+        $f = file_get_contents($url);
+        if (!file_exists(DIR_IMG_SAVE . $hash)) {
+            exec("wget $url -P " . DIR_IMG_SAVE);
+            $text = '@' . $st->user->screen_name . ' 遅れたけどえるざっぷのPCの壁紙変更に成功したよ！ありがとう！';
+            post_elmane($st->id, $text);
+        }
+        exec("display -window root -resize 1366x768 " . DIR_IMG_SAVE . $hash);
+        break;
+    }
+}
+
