@@ -15,14 +15,20 @@ define('EM_OAUTH_TOKEN_SECRET' , '*********');
  *
  */
 
-$to = new TwistOAuth(EM_CONSUMER_KEY, EM_CONSUMER_SECRET, EM_OAUTH_TOKEN, EM_OAUTH_TOKEN_SECRET);
+$to;
+try {
+    $to = new TwistOAuth(EM_CONSUMER_KEY, EM_CONSUMER_SECRET, EM_OAUTH_TOKEN, EM_OAUTH_TOKEN_SECRET);
+ } catch (TwistException $e) {
+    echo $e->getMessage();
+ }
 
 define('YOUR_SCREEN_NAME', 'arzzup');
 define('MATCH_PATTERN_EJECT', '#(eject|[起お]き[ろ|て])#u');
 define('MATCH_PATTERN_BG', '#(bg|(壁|かべ)(紙|[がか]み)|アッシェンテ|ｱｯｼｪﾝﾃ)#u');
 
-define('DIR_IMG_SAVE', '~/Pictures/bg/');
+define('DIR_IMG_SAVE', '/home/hiro/Pictures/bg/');
 
+post_startup();
 load_last_bg();
 //
 
@@ -71,7 +77,7 @@ if ($fp) {
                     continue;
                 }
                 $words = explode('/', $url);
-                $hash = $words[4];
+                $hash = array_pop($words);
                 $f = file_get_contents($url);
                 if (!file_exists(DIR_IMG_SAVE . $hash)) {
                     exec("wget $url -P " . DIR_IMG_SAVE);
@@ -85,14 +91,22 @@ if ($fp) {
     fclose($fp);
 }
 
-function post_elmane($rep_id, $text) {
-    global $to;
-    $query = 'statuses/update';
-    $params = array(
-        'in_reply_to_status_id' => $rep_id,
-        'status' => $text,
-    );
-    $to->post($query, $params);
+function post_startup() {
+    post_elmane('えるざっぷがPCを起動したよ！');
+}
+
+function post_elmane($text, $rep_id = NULL) {
+    try {
+        global $to;
+        $query = 'statuses/update';
+        $params = array(
+            'status' => $text,
+        );
+        if (isset($rep_id)) {
+            $params['in_reply_to_status_id' ] = $rep_id;
+        }
+        $to->post($query, $params);
+    } catch (TwistException $e) { }
 }
 
 function load_last_bg() {
