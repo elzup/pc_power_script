@@ -22,6 +22,8 @@ try {
     echo $e->getMessage();
  }
 
+
+// --- 
 define('YOUR_SCREEN_NAME', 'arzzup');
 define('MATCH_PATTERN_EJECT', '#(eject|[起お]き[ろ|て])#u');
 define('MATCH_PATTERN_BG', '#(bg|(壁|かべ)(紙|[がか]み)|アッシェンテ|ｱｯｼｪﾝﾃ)#u');
@@ -67,13 +69,15 @@ if ($fp) {
         $res = json_decode($res, true);
         // テキスト判定部分
         if (isset($res['in_reply_to_screen_name']) && preg_match('#' . YOUR_SCREEN_NAME . '#i', $res['in_reply_to_screen_name'])) {
+            // eject
             if (preg_match(MATCH_PATTERN_EJECT, $res['text'])) {
                 `eject`;
                 $text = '@' . $res['user']['screen_name'] . ' えるざっぷ叩き起こしたよ！ありがとう！';
                 post_elmane($res['id'], $text);
             }
+            // eject
             if (preg_match(MATCH_PATTERN_BG, $res['text'])) {
-                if (!$url = $res['entities']['media'][0]['media_url']) {
+                if ((!$url = @$res['entities']['media'][0]['media_url']) && (!$url = @$res['entities']['urls'][0]['expanded_url'])) {
                     continue;
                 }
                 $words = explode('/', $url);
@@ -92,7 +96,8 @@ if ($fp) {
 }
 
 function post_startup() {
-    post_elmane('えるざっぷがPCを起動したよ！');
+    $date_str = date('m月d日 H時');
+    post_elmane('えるざっぷがPCを起動したよ！[' . $date_str . ']');
 }
 
 function post_elmane($text, $rep_id = NULL) {
@@ -120,7 +125,7 @@ function load_last_bg() {
     );
     $res = $to->get($query, $params);
     foreach ($res->statuses as $st) {
-        if (!preg_match(MATCH_PATTERN_BG, $st->text) || (!$url = @$st->entities->media[0]->media_url)) {
+        if (!preg_match(MATCH_PATTERN_BG, $st->text) || ((!$url = @$st->entities->media[0]->media_url) && (!$url = @$st->entities->urls[0]->expanded_url))) {
             continue;
         }
         $words = explode('/', $url);
@@ -134,5 +139,12 @@ function load_last_bg() {
         exec("display -window root -resize 1366x768 " . DIR_IMG_SAVE . $hash);
         break;
     }
+}
+
+function collect_img_url($status) {
+    if ((!$url = @$st->entities->media[0]->media_url) && (!$url = @$st->entities->urls[0]->expanded_url)) {
+        return FALSE;
+    }
+    return $url;
 }
 
