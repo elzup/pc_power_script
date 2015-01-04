@@ -1,3 +1,5 @@
 /vendor/
 keys.php
 composer.lock
+nohup.out
+
