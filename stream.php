@@ -30,7 +30,7 @@ define('MATCH_PATTERN_BG', '#(?:bg|(?:壁|かべ)(?:紙|[がか]み)|アッシ�
 
 define('DIR_IMG_SAVE', '/home/hiro/Pictures/bg/');
 
-post_startup();
+//post_startup();
 //load_last_bg();
 //
 
@@ -84,7 +84,12 @@ if ($fp) {
                         return;
                     }
                     // 画像ワードのみ
-                    $img = get_image($q);
+                    $img = get_rand_image(get_images($q));
+                    if (!isset($img)) {
+                        $text = "@{$res['user']['screen_name']} なぜか壁紙をロードできなかったよ！残念！";
+                        post_elmane($text, $res['id']);
+                        continue;
+                    }
                     $url = $img->link;
                     $img->title;
                     $text = '@' . $res['user']['screen_name'] . " えるざっぷの壁紙を「{$img->title}」にしたよ！ありがとう！";
@@ -140,26 +145,39 @@ function post_elmane_image($text, $url, $rep_id = NULL) {
     }
 }
 
-function get_image($q) {
+function get_images($q) {
     $client = new Google_Client();
     $client->setApplicationName(GOOGLE_APP_NAME);
     $client->setDeveloperKey(GOOGLE_API_KEY);
-
     $service = new Google_Service_Customsearch($client);
     $query = $q;
     $param = array(
         'searchType' => 'image',
+        'imgSize' => 'xlarge',
         'cx'         => GOOGLE_CX,
-        'num'        => '5',
+        'num'        => '10',
         'safe'        => 'medium',
         'lr'        => 'lang_ja',
     );
     $results = $service->cse->listCse($query, $param);
     $items = $results->getItems();
-    $img = $items[array_rand($items)];
-    return $img;
+//    $img = $items[array_rand($items)];
+    return $items;
 }
 
+function get_rand_image($images) {
+    shuffle($images);
+    foreach ($images as $i) {
+        if (is_image($i->link)) {
+            return $i;
+        }
+    }
+    return NULL;
+}
+
+function is_image($url) {
+    return !!@exif_imagetype($url);
+}
 
 function load_last_bg() {
     global $to;
@@ -194,4 +212,3 @@ function collect_img_url($status) {
     }
     return $url;
 }
-
