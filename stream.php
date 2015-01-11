@@ -86,7 +86,7 @@ if ($fp) {
                 echo "bg\n";
                 $url = get_image_from_tweet($res);
                 if (empty($url)) {
-                    $q = $m['q'];
+                    $q = trim($m['q']);
                     if (empty($q)) {
                         // 対象外
                         return;
