@@ -25,12 +25,13 @@ try {
 
 // --- 
 define('YOUR_SCREEN_NAME', 'arzzup');
+define('ELMANE_SCREEN_NAME', 'elzup_mg');
 define('MATCH_PATTERN_EJECT', '#(?:eject|[起お]き[ろ|て])#u');
 define('MATCH_PATTERN_BG', '#(?:bg|(?:壁|かべ)(?:紙|[がか]み)|アッシェンテ|ｱｯｼｪﾝﾃ)(?<q>.*?)(?:http.*)?$#u');
 
 define('DIR_IMG_SAVE', '/home/hiro/Pictures/bg/');
 
-//post_startup();
+post_startup();
 //load_last_bg();
 //
 
@@ -68,16 +69,23 @@ if ($fp) {
         $res = fgets($fp);
         $res = json_decode($res, true);
         // テキスト判定部分
-        if (isset($res['in_reply_to_screen_name']) && preg_match('#' . YOUR_SCREEN_NAME . '#i', $res['in_reply_to_screen_name'])) {
+        if (isset($res['in_reply_to_screen_name']) 
+            && preg_match('#^' . YOUR_SCREEN_NAME . '$#i', $res['in_reply_to_screen_name'])
+            && !preg_match('#^' . ELMANE_SCREEN_NAME . '$#i', $res['user']['screen_name'])
+            ) {
+            echo "rep\n";
             // eject
             if (preg_match(MATCH_PATTERN_EJECT, $res['text'])) {
+                echo "eject\n";
                 `eject`;
                 $text = '@' . $res['user']['screen_name'] . ' えるざっぷ叩き起こしたよ！ありがとう！';
                 post_elmane($res['id'], $text);
             }
             // bg
             if (preg_match(MATCH_PATTERN_BG, $res['text'], $m)) {
-                if ((!$url = @$res['entities']['media'][0]['media_url']) && (!$url = @$res['entities']['urls'][0]['expanded_url'])) {
+                echo "bg\n";
+                $url = get_image_from_tweet($res);
+                if (empty($url)) {
                     $q = $m['q'];
                     if (empty($q)) {
                         // 対象外
@@ -86,7 +94,7 @@ if ($fp) {
                     // 画像ワードのみ
                     $img = get_rand_image(get_images($q));
                     if (!isset($img)) {
-                        $text = "@{$res['user']['screen_name']} なぜか壁紙をロードできなかったよ！残念！";
+                        $text = "@{$res['user']['screen_name']} なぜか壁紙をロードできなかったよ〜ん！残念！";
                         post_elmane($text, $res['id']);
                         continue;
                     }
@@ -96,7 +104,8 @@ if ($fp) {
                     post_elmane_image($text, $url, $res['id']);
                 } else {
                     // アップロード
-                    $message = 'えるざっぷのPCの壁紙変更に成功したよ！かわいい壁紙をありがとう！';
+                    $url .= ':orig';
+                    $message = 'えるざっぷのPCの壁紙変更に成功したよ！かわいい壁紙をありがとう！ (' . date("H:i:s", time()) . ')';
                     $text = '@' . $res['user']['screen_name'] . $message;
                     post_elmane($text, $res['id']);
                 }
@@ -153,7 +162,7 @@ function get_images($q) {
     $query = $q;
     $param = array(
         'searchType' => 'image',
-        'imgSize' => 'xlarge',
+        'imgSize' => 'xxlarge',
         'cx'         => GOOGLE_CX,
         'num'        => '10',
         'safe'        => 'medium',
@@ -177,6 +186,14 @@ function get_rand_image($images) {
 
 function is_image($url) {
     return !!@exif_imagetype($url);
+}
+
+function get_image_from_tweet($st) {
+    $url = @$st['entities']['media'][0]['media_url'];
+    if (isset($url) && is_image($url)) {
+        return $url;
+    }
+    return FALSE;
 }
 
 function load_last_bg() {
