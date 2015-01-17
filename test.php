@@ -1,5 +1,12 @@
 <?php
 
+try {
+    $a = 10;
+} catch (Exception $e) {
+}
+echo $a;
+exit;
+
 $text = '@Arzzup 壁紙 榛名 可愛い http://hoge';
 define('MATCH_PATTERN_BG', '#(?:bg|(?:壁|かべ)(?:紙|[がか]み)|アッシェンテ|ｱｯｼｪﾝﾃ)(?<q>.*?)(?:http.*)?$#u');
 if (preg_match(MATCH_PATTERN_BG, $text, $m)) {

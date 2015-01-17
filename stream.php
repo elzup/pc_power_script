@@ -15,14 +15,6 @@ define('EM_OAUTH_TOKEN_SECRET' , '*********');
  *
  */
 
-$to;
-try {
-    $to = new TwistOAuth(EM_CONSUMER_KEY, EM_CONSUMER_SECRET, EM_OAUTH_TOKEN, EM_OAUTH_TOKEN_SECRET);
- } catch (TwistException $e) {
-    echo $e->getMessage();
- }
-
-
 // --- 
 define('YOUR_SCREEN_NAME', 'arzzup');
 define('ELMANE_SCREEN_NAME', 'elzup_mg');
@@ -72,6 +64,7 @@ if ($fp) {
         if (isset($res['in_reply_to_screen_name']) 
             && preg_match('#^' . YOUR_SCREEN_NAME . '$#i', $res['in_reply_to_screen_name'])
             && !preg_match('#^' . ELMANE_SCREEN_NAME . '$#i', $res['user']['screen_name'])
+            && !preg_match('#^akameco$#i', $res['user']['screen_name'])
             ) {
             echo "rep\n";
             // eject
@@ -92,14 +85,30 @@ if ($fp) {
                         return;
                     }
                     // 画像ワードのみ
-                    $img = get_rand_image(get_images($q));
+                    if (substr($q, 0, 1) == '#') {
+                        // Twitter ハッシュタグから
+                        $sts = get_image_tweets($q);
+                        shuffle($sts);
+                        foreach ($sts as $st) {
+                            if ($url_head = get_image_from_tweet($st)) {
+                                break;
+                            }
+                        }
+                        if ($url_head) {
+                            $img = new stdclass();
+                            $img->title = $q;
+                            $img->link = $url_head . ':orig';
+                        }
+                    } else {
+                        // Google 画像検索
+                        $img = get_rand_image(get_images($q));
+                    }
                     if (!isset($img)) {
                         $text = "@{$res['user']['screen_name']} なぜか壁紙をロードできなかったよ〜ん！残念！";
                         post_elmane($text, $res['id']);
                         continue;
                     }
                     $url = $img->link;
-                    $img->title;
                     $text = '@' . $res['user']['screen_name'] . " えるざっぷの壁紙を「{$img->title}」にしたよ！ありがとう！";
                     post_elmane_image($text, $url, $res['id']);
                 } else {
@@ -123,7 +132,7 @@ function post_startup() {
 
 function post_elmane($text, $rep_id = NULL) {
     try {
-        global $to;
+        $to = new TwistOAuth(EM_CONSUMER_KEY, EM_CONSUMER_SECRET, EM_OAUTH_TOKEN, EM_OAUTH_TOKEN_SECRET);
         $query = 'statuses/update';
         $params = array(
             'status' => $text,
@@ -139,7 +148,7 @@ function post_elmane($text, $rep_id = NULL) {
 
 function post_elmane_image($text, $url, $rep_id = NULL) {
     try {
-        global $to;
+        $to = new TwistOAuth(EM_CONSUMER_KEY, EM_CONSUMER_SECRET, EM_OAUTH_TOKEN, EM_OAUTH_TOKEN_SECRET);
         $query = 'statuses/update_with_media';
         $params = array(
             'status' => $text,
@@ -162,7 +171,7 @@ function get_images($q) {
     $query = $q;
     $param = array(
         'searchType' => 'image',
-        'imgSize' => 'xxlarge',
+        'imgSize' => 'xlarge',
         'cx'         => GOOGLE_CX,
         'num'        => '10',
         'safe'        => 'medium',
@@ -172,6 +181,21 @@ function get_images($q) {
     $items = $results->getItems();
 //    $img = $items[array_rand($items)];
     return $items;
+}
+
+function get_image_tweets($q) {
+    $st = NULL;
+    try {
+        $to = new TwistOAuth(EM_CONSUMER_KEY, EM_CONSUMER_SECRET, EM_OAUTH_TOKEN, EM_OAUTH_TOKEN_SECRET);
+        $query = 'search/tweets';
+        $params = array(
+            'q' => $q . " filter:images",
+        );
+        $st = $to->get($query, $params);
+    } catch (TwistException $e) {
+        echo $e->getMessage();
+    }
+    return @$st->statuses;
 }
 
 function get_rand_image($images) {
@@ -184,12 +208,18 @@ function get_rand_image($images) {
     return NULL;
 }
 
+
 function is_image($url) {
     return !!@exif_imagetype($url);
 }
 
 function get_image_from_tweet($st) {
-    $url = @$st['entities']['media'][0]['media_url'];
+
+    if (is_array($st)) {
+        $url = @$st['entities']['media'][0]['media_url'];
+    } else {
+        $url = @$st->entities->media[0]->media_url;
+    }
     if (isset($url) && is_image($url)) {
         return $url;
     }
@@ -197,7 +227,7 @@ function get_image_from_tweet($st) {
 }
 
 function load_last_bg() {
-    global $to;
+    $to = new TwistOAuth(EM_CONSUMER_KEY, EM_CONSUMER_SECRET, EM_OAUTH_TOKEN, EM_OAUTH_TOKEN_SECRET);
     $query = 'search/tweets';
     $params = array(
         'q' => '@' . YOUR_SCREEN_NAME,
