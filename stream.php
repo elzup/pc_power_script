@@ -248,7 +248,7 @@ function load_last_bg() {
             $text = '@' . $st->user->screen_name . ' 遅れたけどえるざっぷのPCの壁紙変更に成功したよ！ありがとう！';
             post_elmane($st->id, $text);
         }
-        exec("display -window root -resize 1366x768 " . DIR_IMG_SAVE . $hash);
+        exec("display -window root -resize " . implode('x', get_pc_screen_size()). " " . DIR_IMG_SAVE . $hash);
         break;
     }
 }
@@ -258,4 +258,8 @@ function collect_img_url($status) {
         return FALSE;
     }
     return $url;
+}
+
+function get_pc_screen_size() {
+    return explode('x', trim(`xdpyinfo | grep dimensions | perl -pe 's|.*?(\d*x\d*).*|\\1|'`));
 }
