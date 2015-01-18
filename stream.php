@@ -78,47 +78,50 @@ if ($fp) {
             if (preg_match(MATCH_PATTERN_BG, $res['text'], $m)) {
                 echo "bg\n";
                 $url = get_image_from_tweet($res);
-                if (empty($url)) {
-                    $q = trim($m['q']);
-                    if (empty($q)) {
-                        // 対象外
-                        return;
-                    }
-                    // 画像ワードのみ
-                    if (substr($q, 0, 1) == '#') {
-                        // Twitter ハッシュタグから
-                        $sts = get_image_tweets($q);
-                        shuffle($sts);
-                        foreach ($sts as $st) {
-                            if ($url_head = get_image_from_tweet($st)) {
-                                break;
+                try {
+                    if (empty($url)) {
+                        $q = trim($m['q']);
+                        if (empty($q)) {
+                            // 対象外
+                            return;
+                        }
+                        // 画像ワードのみ
+                        if (substr($q, 0, 1) == '#') {
+                            // Twitter ハッシュタグから
+                            $sts = get_image_tweets($q);
+                            shuffle($sts);
+                            foreach ($sts as $st) {
+                                if ($url_head = get_image_from_tweet($st)) {
+                                    break;
+                                }
                             }
+                            if ($url_head) {
+                                $img = new stdclass();
+                                $img->title = $q;
+                                $img->link = $url_head . ':orig';
+                            }
+                        } else {
+                            // Google 画像検索
+                            $img = get_rand_image(get_images($q));
                         }
-                        if ($url_head) {
-                            $img = new stdclass();
-                            $img->title = $q;
-                            $img->link = $url_head . ':orig';
-                        }
+                        $url = $img->link;
+                        $text = '@' . $res['user']['screen_name'] . " えるざっぷの壁紙を「{$img->title}」にしたよ！ありがとう！";
+                        post_elmane_image($text, $url, $res['id']);
                     } else {
-                        // Google 画像検索
-                        $img = get_rand_image(get_images($q));
+                        // アップロード
+                        $url .= ':orig';
+                        $message = 'えるざっぷのPCの壁紙変更に成功したよ！かわいい壁紙をありがとう！ (' . date("H:i:s", time()) . ')';
+                        $text = '@' . $res['user']['screen_name'] . $message;
+                        post_elmane($text, $res['id']);
                     }
+                    exec("display -window root -resize 1366x768 " . $url);
+                } catch (Exception $e) {
+                    echo $e->getMessage();
                     if (!isset($img)) {
                         $text = "@{$res['user']['screen_name']} なぜか壁紙をロードできなかったよ〜ん！残念！";
                         post_elmane($text, $res['id']);
-                        continue;
                     }
-                    $url = $img->link;
-                    $text = '@' . $res['user']['screen_name'] . " えるざっぷの壁紙を「{$img->title}」にしたよ！ありがとう！";
-                    post_elmane_image($text, $url, $res['id']);
-                } else {
-                    // アップロード
-                    $url .= ':orig';
-                    $message = 'えるざっぷのPCの壁紙変更に成功したよ！かわいい壁紙をありがとう！ (' . date("H:i:s", time()) . ')';
-                    $text = '@' . $res['user']['screen_name'] . $message;
-                    post_elmane($text, $res['id']);
                 }
-                exec("display -window root -resize 1366x768 " . $url);
             }
         }
     }
