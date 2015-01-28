@@ -21,7 +21,7 @@ define('ELMANE_SCREEN_NAME', 'elzup_mg');
 define('MATCH_PATTERN_EJECT', '#(?:eject|[起お]き[ろ|て])#u');
 define('MATCH_PATTERN_BG', '#(?:bg|(?:壁|かべ)(?:紙|[がか]み)|アッシェンテ|ｱｯｼｪﾝﾃ)(?<q>.*?)(?:http.*)?$#u');
 
-define('DIR_IMG_SAVE', '/home/hiro/Pictures/bg/');
+define('DIR_IMG_SAVE', '/Users/hiro/Pictures/tmpbg/');
 
 post_startup();
 //load_last_bg();
@@ -105,16 +105,17 @@ if ($fp) {
                             $img = get_rand_image(get_images($q));
                         }
                         $url = $img->link;
+                        set_backgrond($url);
                         $text = '@' . $res['user']['screen_name'] . " えるざっぷの壁紙を「{$img->title}」にしたよ！ありがとう！";
                         post_elmane_image($text, $url, $res['id']);
                     } else {
                         // アップロード
                         $url .= ':orig';
-                        $message = 'えるざっぷのPCの壁紙変更に成功したよ！かわいい壁紙をありがとう！ (' . date("H:i:s", time()) . ')';
+                        set_backgrond($url);
+                        $message = 'えるざっぷの MacBook の壁紙変更に成功したよ！かわいい壁紙をありがとう！ (' . date("H:i:s", time()) . ')';
                         $text = '@' . $res['user']['screen_name'] . $message;
                         post_elmane($text, $res['id']);
                     }
-                    exec("display -window root -resize 1366x768 " . $url);
                 } catch (Exception $e) {
                     echo $e->getMessage();
                     if (!isset($img)) {
@@ -130,7 +131,7 @@ if ($fp) {
 
 function post_startup() {
     $date_str = date('m月d日 H時');
-    post_elmane('えるざっぷがPCを起動したよ！[' . $date_str . ']');
+    post_elmane('えるざっぷが MacBook を起動したよ！[' . $date_str . ']');
 }
 
 function post_elmane($text, $rep_id = NULL) {
@@ -248,12 +249,22 @@ function load_last_bg() {
         $f = file_get_contents($url);
         if (!file_exists(DIR_IMG_SAVE . $hash)) {
             exec("wget $url -P " . DIR_IMG_SAVE);
-            $text = '@' . $st->user->screen_name . ' 遅れたけどえるざっぷのPCの壁紙変更に成功したよ！ありがとう！';
+            $text = '@' . $st->user->screen_name . ' 遅れたけどえるざっぷの MacBook の壁紙変更に成功したよ！ありがとう！';
             post_elmane($st->id, $text);
         }
         exec("display -window root -resize " . implode('x', get_pc_screen_size()). " " . DIR_IMG_SAVE . $hash);
         break;
     }
+}
+
+function set_backgrond($url) {
+    if (!preg_match('#.*/(.*)[?:]?.*$#', $url, $m)) {
+        throw new Exception('invalid url [' . $url . ']');
+    }
+    $filename = $m[1];
+    $save_path = DIR_IMG_SAVE . $filename;
+    file_put_contents($save_path, file_get_contents($url));
+	`osascript -e 'tell application "Finder" to set desktop picture to POSIX file "{$save_path}"'`;
 }
 
 function collect_img_url($status) {

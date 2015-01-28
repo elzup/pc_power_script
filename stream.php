@@ -110,7 +110,7 @@ if ($fp) {
                     } else {
                         // アップロード
                         $url .= ':orig';
-                        $message = 'えるざっぷのPCの壁紙変更に成功したよ！かわいい壁紙をありがとう！ (' . date("H:i:s", time()) . ')';
+                        $message = 'えるざっぷの LifebookPC の壁紙変更に成功したよ！かわいい壁紙をありがとう！ (' . date("H:i:s", time()) . ')';
                         $text = '@' . $res['user']['screen_name'] . $message;
                         post_elmane($text, $res['id']);
                     }
@@ -130,7 +130,7 @@ if ($fp) {
 
 function post_startup() {
     $date_str = date('m月d日 H時');
-    post_elmane('えるざっぷがPCを起動したよ！[' . $date_str . ']');
+    post_elmane('えるざっぷが LifebookPC を起動したよ！[' . $date_str . ']');
 }
 
 function post_elmane($text, $rep_id = NULL) {
@@ -248,7 +248,7 @@ function load_last_bg() {
         $f = file_get_contents($url);
         if (!file_exists(DIR_IMG_SAVE . $hash)) {
             exec("wget $url -P " . DIR_IMG_SAVE);
-            $text = '@' . $st->user->screen_name . ' 遅れたけどえるざっぷのPCの壁紙変更に成功したよ！ありがとう！';
+            $text = '@' . $st->user->screen_name . ' 遅れたけどえるざっぷの LifebookPC の壁紙変更に成功したよ！ありがとう！';
             post_elmane($st->id, $text);
         }
         exec("display -window root -resize " . implode('x', get_pc_screen_size()). " " . DIR_IMG_SAVE . $hash);
